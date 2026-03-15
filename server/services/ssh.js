@@ -1,5 +1,6 @@
 const { NodeSSH } = require('node-ssh');
 const fs = require('fs');
+const { decrypt } = require('./crypto');
 
 const activeConnections = new Map();
 
@@ -21,12 +22,12 @@ async function getConnection(server) {
   };
 
   if (server.auth_type === 'key_paste' && server.private_key) {
-    let pk = server.private_key.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim() + '\n';
+    let pk = decrypt(server.private_key).replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim() + '\n';
     connectOpts.privateKey = pk;
   } else if (server.auth_type === 'key_path' && server.private_key_path) {
     connectOpts.privateKey = fs.readFileSync(server.private_key_path, 'utf8');
   } else {
-    connectOpts.password = server.server_password;
+    connectOpts.password = decrypt(server.server_password);
   }
 
   await ssh.connect(connectOpts);

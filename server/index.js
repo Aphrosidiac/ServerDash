@@ -15,6 +15,7 @@ const serverRoutes = require('./routes/servers');
 const projectRoutes = require('./routes/projects');
 const environmentRoutes = require('./routes/environments');
 const webhookRoutes = require('./routes/webhooks');
+const commandSetRoutes = require('./routes/command-sets');
 
 const app = express();
 const server = http.createServer(app);
@@ -90,6 +91,7 @@ app.use('/api/servers', serverRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/environments', environmentRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/command-sets', commandSetRoutes);
 
 // Serve frontend in production
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
@@ -101,7 +103,11 @@ app.get('/{*splat}', (req, res) => {
 });
 
 // Seed admin user
-seedAdmin(process.env.ADMIN_USERNAME || 'admin', process.env.ADMIN_PASSWORD || 'admin123');
+if (!process.env.ADMIN_USERNAME || !process.env.ADMIN_PASSWORD) {
+  console.error('ADMIN_USERNAME and ADMIN_PASSWORD must be set in .env');
+  process.exit(1);
+}
+seedAdmin(process.env.ADMIN_USERNAME, process.env.ADMIN_PASSWORD);
 
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {

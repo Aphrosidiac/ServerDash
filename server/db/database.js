@@ -56,6 +56,16 @@ db.exec(`
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS command_sets (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    commands TEXT NOT NULL,
+    color TEXT DEFAULT 'green',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS environments (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id INTEGER NOT NULL,
@@ -91,6 +101,28 @@ if (!logCols.includes('commit_hash')) {
 }
 if (!logCols.includes('environment_id')) {
   db.exec('ALTER TABLE deploy_logs ADD COLUMN environment_id INTEGER');
+}
+
+// Migrate existing plaintext credentials to encrypted
+function migrateCredentials() {
+  const { encrypt } = require('../services/crypto');
+  const servers = db.prepare('SELECT id, private_key, server_password FROM servers').all();
+  for (const s of servers) {
+    // Skip if already encrypted (contains colons from our format)
+    const needsEncrypt = (val) => val && !val.includes(':');
+    if (needsEncrypt(s.server_password) || needsEncrypt(s.private_key)) {
+      db.prepare('UPDATE servers SET server_password = ?, private_key = ? WHERE id = ?')
+        .run(
+          needsEncrypt(s.server_password) ? encrypt(s.server_password) : s.server_password,
+          needsEncrypt(s.private_key) ? encrypt(s.private_key) : s.private_key,
+          s.id
+        );
+    }
+  }
+}
+
+if (process.env.ENCRYPTION_KEY) {
+  migrateCredentials();
 }
 
 function seedAdmin(username, password) {

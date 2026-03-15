@@ -2,6 +2,7 @@ const express = require('express');
 const { db } = require('../db/database');
 const { testConnection, execCommand } = require('../services/ssh');
 const { authMiddleware } = require('../middleware/auth');
+const { encrypt } = require('../services/crypto');
 
 const router = express.Router();
 router.use(authMiddleware);
@@ -27,7 +28,7 @@ router.post('/', (req, res) => {
 
   const result = db.prepare(
     'INSERT INTO servers (name, host, port, username, auth_type, private_key_path, private_key, server_password) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(name, host, port || 22, username, auth_type || 'password', private_key_path || null, private_key || null, server_password || null);
+  ).run(name, host, port || 22, username, auth_type || 'password', private_key_path || null, encrypt(private_key) || null, encrypt(server_password) || null);
 
   const server = db.prepare(`SELECT ${SAFE_FIELDS} FROM servers WHERE id = ?`).get(result.lastInsertRowid);
   res.status(201).json(server);
@@ -37,7 +38,7 @@ router.put('/:id', (req, res) => {
   const { name, host, port, username, auth_type, private_key_path, private_key, server_password } = req.body;
   db.prepare(
     'UPDATE servers SET name = ?, host = ?, port = ?, username = ?, auth_type = ?, private_key_path = ?, private_key = ?, server_password = ? WHERE id = ?'
-  ).run(name, host, port || 22, username, auth_type || 'password', private_key_path || null, private_key || null, server_password || null, req.params.id);
+  ).run(name, host, port || 22, username, auth_type || 'password', private_key_path || null, encrypt(private_key) || null, encrypt(server_password) || null, req.params.id);
 
   const server = db.prepare(`SELECT ${SAFE_FIELDS} FROM servers WHERE id = ?`).get(req.params.id);
   res.json(server);

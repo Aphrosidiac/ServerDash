@@ -5,7 +5,15 @@ import { getSocket } from '../socket';
 import StatusBadge from '../components/StatusBadge';
 import Terminal from '../components/Terminal';
 import toast from 'react-hot-toast';
-import { Server, FolderGit2, Rocket, AlertTriangle, ArrowUpCircle, X } from 'lucide-react';
+import { Server, FolderGit2, Rocket, AlertTriangle, Play, X } from 'lucide-react';
+
+const colorMap = {
+  green: { bg: 'bg-accent-green/8', border: 'border-accent-green/20', text: 'text-accent-green' },
+  blue: { bg: 'bg-accent-blue/8', border: 'border-accent-blue/20', text: 'text-accent-blue' },
+  yellow: { bg: 'bg-accent-yellow/8', border: 'border-accent-yellow/20', text: 'text-accent-yellow' },
+  orange: { bg: 'bg-accent-orange/8', border: 'border-accent-orange/20', text: 'text-accent-orange' },
+  red: { bg: 'bg-accent-red/8', border: 'border-accent-red/20', text: 'text-accent-red' },
+};
 
 export default function Dashboard() {
   const [servers, setServers] = useState([]);
@@ -13,11 +21,19 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [termLines, setTermLines] = useState([]);
   const [activeProject, setActiveProject] = useState(null);
+  const [cmdSetsByProject, setCmdSetsByProject] = useState({});
 
-  const load = useCallback(() => {
-    Promise.all([api.getServers(), api.getProjects()])
-      .then(([s, p]) => { setServers(s); setProjects(p); })
-      .finally(() => setLoading(false));
+  const load = useCallback(async () => {
+    try {
+      const [s, p] = await Promise.all([api.getServers(), api.getProjects()]);
+      setServers(s);
+      setProjects(p);
+      const csMap = {};
+      await Promise.all(p.map(async (proj) => {
+        csMap[proj.id] = await api.getCommandSets(proj.id);
+      }));
+      setCmdSetsByProject(csMap);
+    } finally { setLoading(false); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -43,11 +59,11 @@ export default function Dashboard() {
     };
   }, [projects.length, load]);
 
-  const handleUpdate = async (project) => {
+  const handleRunCommandSet = async (setId, project) => {
     setActiveProject(project);
     setTermLines([]);
     try {
-      await api.runUpdate(project.id);
+      await api.runCommandSet(setId);
     } catch (err) { toast.error(err.message); setActiveProject(null); }
   };
 
@@ -161,13 +177,17 @@ export default function Dashboard() {
                     </td>
                     <td className="px-6 py-3">
                       <div className="flex items-center gap-2 justify-end">
-                        <button onClick={() => handleUpdate(project)}
-                          disabled={project.status === 'updating'}
-                          className="flex items-center gap-1.5 font-['JetBrains_Mono'] text-[10px] font-semibold text-accent-blue tracking-[0.5px] uppercase bg-accent-blue/6 border border-accent-blue/20 px-3 py-1.5 hover:bg-accent-blue/10 transition-colors disabled:opacity-40">
-                          <ArrowUpCircle size={11} /> Update
-                        </button>
+                        {(cmdSetsByProject[project.id] || []).slice(0, 3).map(set => {
+                          const c = colorMap[set.color] || colorMap.green;
+                          return (
+                            <button key={set.id} onClick={() => handleRunCommandSet(set.id, project)}
+                              className={`flex items-center gap-1 font-['JetBrains_Mono'] text-[10px] font-semibold tracking-[0.5px] uppercase ${c.bg} border ${c.border} ${c.text} px-3 py-1.5 hover:opacity-80 transition-opacity`}>
+                              <Play size={9} /> {set.name}
+                            </button>
+                          );
+                        })}
                         <Link to={`/projects/${project.id}`} className="font-['JetBrains_Mono'] text-[10px] font-semibold text-accent-green tracking-[0.5px] uppercase hover:underline">
-                          Access
+                          Open
                         </Link>
                       </div>
                     </td>

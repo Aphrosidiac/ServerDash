@@ -81,4 +81,11 @@ export const api = {
   promoteEnvironment: (id) => request(`/environments/${id}/promote`, { method: 'POST' }),
   rollbackEnvironment: (id) => request(`/environments/${id}/rollback`, { method: 'POST' }),
   getEnvironmentLogs: (id) => request(`/environments/${id}/logs`),
+
+  // Command Sets
+  getCommandSets: (projectId) => request(`/command-sets/project/${projectId}`),
+  createCommandSet: (body) => request('/command-sets', { method: 'POST', body }),
+  updateCommandSet: (id, body) => request(`/command-sets/${id}`, { method: 'PUT', body }),
+  deleteCommandSet: (id) => request(`/command-sets/${id}`, { method: 'DELETE' }),
+  runCommandSet: (id) => request(`/command-sets/${id}/run`, { method: 'POST' }),
 };
