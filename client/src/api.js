@@ -71,4 +71,14 @@ export const api = {
   execCommand: (id, command) => request(`/projects/${id}/exec`, { method: 'POST', body: { command } }),
   getProjectLogs: (id) => request(`/projects/${id}/logs`),
   checkStatus: (id) => request(`/projects/${id}/status`, { method: 'POST' }),
+
+  // Environments
+  getEnvironments: (projectId) => request(`/environments/project/${projectId}`),
+  createEnvironment: (body) => request('/environments', { method: 'POST', body }),
+  updateEnvironment: (id, body) => request(`/environments/${id}`, { method: 'PUT', body }),
+  deleteEnvironment: (id) => request(`/environments/${id}`, { method: 'DELETE' }),
+  deployEnvironment: (id) => request(`/environments/${id}/deploy`, { method: 'POST' }),
+  promoteEnvironment: (id) => request(`/environments/${id}/promote`, { method: 'POST' }),
+  rollbackEnvironment: (id) => request(`/environments/${id}/rollback`, { method: 'POST' }),
+  getEnvironmentLogs: (id) => request(`/environments/${id}/logs`),
 };

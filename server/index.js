@@ -13,6 +13,8 @@ const { execCommand } = require('./services/ssh');
 const authRoutes = require('./routes/auth');
 const serverRoutes = require('./routes/servers');
 const projectRoutes = require('./routes/projects');
+const environmentRoutes = require('./routes/environments');
+const webhookRoutes = require('./routes/webhooks');
 
 const app = express();
 const server = http.createServer(app);
@@ -86,6 +88,8 @@ io.on('connection', (socket) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/servers', serverRoutes);
 app.use('/api/projects', projectRoutes);
+app.use('/api/environments', environmentRoutes);
+app.use('/api/webhooks', webhookRoutes);
 
 // Serve frontend in production
 const clientDist = path.join(__dirname, '..', 'client', 'dist');

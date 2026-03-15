@@ -1,11 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Server, FolderGit2, LayoutDashboard, LogOut } from 'lucide-react';
+import { Server, FolderGit2, LayoutDashboard, LogOut, GitBranch } from 'lucide-react';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/servers', icon: Server, label: 'Servers' },
   { to: '/projects', icon: FolderGit2, label: 'Projects' },
+  { to: '/pipelines', icon: GitBranch, label: 'Pipelines' },
 ];
 
 export default function Layout({ children }) {

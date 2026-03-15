@@ -55,12 +55,42 @@ db.exec(`
     finished_at DATETIME,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS environments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    server_id INTEGER NOT NULL,
+    branch TEXT NOT NULL DEFAULT 'main',
+    path TEXT NOT NULL,
+    build_command TEXT,
+    restart_command TEXT,
+    auto_deploy INTEGER DEFAULT 0,
+    deploy_order INTEGER DEFAULT 0,
+    status TEXT DEFAULT 'idle',
+    last_deployed_at DATETIME,
+    last_commit TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
+  );
 `);
 
-// Migration: add update_commands column if it doesn't exist
-const columns = db.prepare("PRAGMA table_info(projects)").all().map(c => c.name);
-if (!columns.includes('update_commands')) {
+// Migrations
+const projectCols = db.prepare("PRAGMA table_info(projects)").all().map(c => c.name);
+if (!projectCols.includes('update_commands')) {
   db.exec('ALTER TABLE projects ADD COLUMN update_commands TEXT');
+}
+if (!projectCols.includes('webhook_secret')) {
+  db.exec('ALTER TABLE projects ADD COLUMN webhook_secret TEXT');
+}
+
+const logCols = db.prepare("PRAGMA table_info(deploy_logs)").all().map(c => c.name);
+if (!logCols.includes('commit_hash')) {
+  db.exec('ALTER TABLE deploy_logs ADD COLUMN commit_hash TEXT');
+}
+if (!logCols.includes('environment_id')) {
+  db.exec('ALTER TABLE deploy_logs ADD COLUMN environment_id INTEGER');
 }
 
 function seedAdmin(username, password) {

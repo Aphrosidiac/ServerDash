@@ -3,3 +3,5 @@ node_modules/
 server/db/*.db
 client/dist/
 *.log
+*.db-shm
+*.db-wal
