@@ -19,15 +19,20 @@ const commandSetRoutes = require('./routes/command-sets');
 
 const app = express();
 const server = http.createServer(app);
-const allowedOrigins = /^http:\/\/localhost:\d+$/;
+
+// CORS: allow configured origin or localhost in dev
+const corsOrigin = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map(s => s.trim())
+  : /^http:\/\/localhost:\d+$/;
+
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: corsOrigin,
     credentials: true,
   },
 });
 
-app.use(cors({ origin: allowedOrigins, credentials: true }));
+app.use(cors({ origin: corsOrigin, credentials: true }));
 app.use(express.json({ limit: '2mb' }));
 app.use(cookieParser());
 
