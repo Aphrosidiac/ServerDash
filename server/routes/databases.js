@@ -187,6 +187,95 @@ router.get('/servers/:id/databases/:engine/:dbname/tables', authMiddleware, asyn
   }
 });
 
+// Full schema: all tables, columns, and foreign key relationships
+router.get('/servers/:id/databases/:engine/:dbname/schema', authMiddleware, async (req, res) => {
+  const { id, engine, dbname } = req.params;
+  if (!VALID_ENGINES.includes(engine)) return res.status(400).json({ error: 'Invalid engine' });
+  if (!/^[\w-]+$/.test(dbname)) return res.status(400).json({ error: 'Invalid database name' });
+
+  const server = getServer(id);
+  if (!server) return res.status(404).json({ error: 'Server not found' });
+
+  const creds = getCreds(id, engine);
+  const cli = buildCliPrefix(engine, creds);
+
+  try {
+    let tablesCmd, columnsCmd, fksCmd;
+
+    switch (engine) {
+      case 'mysql':
+        // Get all tables, columns with types/keys, and foreign keys in 3 commands
+        tablesCmd = `${cli} ${dbname} -N -e "SHOW TABLES" 2>&1`;
+        columnsCmd = `${cli} ${dbname} --batch --raw -e "SELECT TABLE_NAME, COLUMN_NAME, COLUMN_TYPE, COLUMN_KEY, IS_NULLABLE, EXTRA FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='${dbname}' ORDER BY TABLE_NAME, ORDINAL_POSITION" 2>&1`;
+        fksCmd = `${cli} ${dbname} --batch --raw -e "SELECT TABLE_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME, CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA='${dbname}' AND REFERENCED_TABLE_NAME IS NOT NULL" 2>&1`;
+        break;
+      case 'postgresql':
+        tablesCmd = `${cli} ${dbname} -t -A -c "SELECT tablename FROM pg_tables WHERE schemaname='public'" 2>&1`;
+        columnsCmd = `${cli} ${dbname} -A -F'\t' -c "SELECT table_name, column_name, data_type, CASE WHEN pk.column_name IS NOT NULL THEN 'PRI' ELSE '' END as column_key, is_nullable, '' as extra FROM information_schema.columns c LEFT JOIN (SELECT ku.column_name, ku.table_name FROM information_schema.table_constraints tc JOIN information_schema.key_column_usage ku ON tc.constraint_name = ku.constraint_name WHERE tc.constraint_type = 'PRIMARY KEY' AND tc.table_schema = 'public') pk ON c.table_name = pk.table_name AND c.column_name = pk.column_name WHERE c.table_schema='public' ORDER BY c.table_name, c.ordinal_position" 2>&1`;
+        fksCmd = `${cli} ${dbname} -A -F'\t' -c "SELECT tc.table_name, kcu.column_name, ccu.table_name AS referenced_table, ccu.column_name AS referenced_column, tc.constraint_name FROM information_schema.table_constraints tc JOIN information_schema.key_column_usage kcu ON tc.constraint_name = kcu.constraint_name JOIN information_schema.constraint_column_usage ccu ON tc.constraint_name = ccu.constraint_name WHERE tc.constraint_type = 'FOREIGN KEY' AND tc.table_schema = 'public'" 2>&1`;
+        break;
+      case 'mongodb':
+        // MongoDB has no schema/FK — just list collections with sample fields
+        tablesCmd = `${cli} ${dbname} --eval "db.getCollectionNames().forEach(c => print(c))" 2>&1`;
+        columnsCmd = `${cli} ${dbname} --eval "db.getCollectionNames().forEach(c => { const doc = db[c].findOne(); const fields = doc ? Object.keys(doc).map(k => c + '\\\\t' + k + '\\\\t' + typeof doc[k]).join('\\\\n') : c + '\\\\t(empty)\\\\tobject'; print(fields); })" 2>&1`;
+        fksCmd = 'echo ""'; // no FKs in MongoDB
+        break;
+    }
+
+    const [tablesResult, columnsResult, fksResult] = await Promise.all([
+      execCommand(server, tablesCmd),
+      execCommand(server, columnsCmd),
+      execCommand(server, fksCmd),
+    ]);
+
+    const tableNames = cleanLines(tablesResult.stdout);
+
+    // Parse columns into { tableName: [{ name, type, key, nullable, extra }] }
+    const tableColumns = {};
+    const colLines = cleanLines(columnsResult.stdout);
+    const colDataLines = colLines.length > 0 && colLines[0].includes('TABLE_NAME') ? colLines.slice(1) : colLines;
+    for (const line of colDataLines) {
+      const parts = line.split('\t');
+      if (parts.length < 3) continue;
+      const tableName = parts[0];
+      if (!tableColumns[tableName]) tableColumns[tableName] = [];
+      tableColumns[tableName].push({
+        name: parts[1],
+        type: parts[2],
+        key: parts[3] || '',
+        nullable: parts[4] || 'YES',
+        extra: parts[5] || '',
+      });
+    }
+
+    // Parse foreign keys into [{ table, column, refTable, refColumn, constraint }]
+    const foreignKeys = [];
+    const fkLines = cleanLines(fksResult.stdout);
+    const fkDataLines = fkLines.length > 0 && fkLines[0].includes('TABLE_NAME') ? fkLines.slice(1) : fkLines;
+    for (const line of fkDataLines) {
+      const parts = line.split('\t');
+      if (parts.length < 4) continue;
+      foreignKeys.push({
+        table: parts[0],
+        column: parts[1],
+        refTable: parts[2],
+        refColumn: parts[3],
+        constraint: parts[4] || '',
+      });
+    }
+
+    // Build tables array
+    const tables = tableNames.map(name => ({
+      name,
+      columns: tableColumns[name] || [],
+    }));
+
+    res.json({ tables, foreignKeys });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Table info (columns) + preview
 router.get('/servers/:id/databases/:engine/:dbname/:table/info', authMiddleware, async (req, res) => {
   const { id, engine, dbname, table } = req.params;

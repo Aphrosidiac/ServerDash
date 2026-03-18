@@ -97,6 +97,7 @@ export const api = {
   listDatabases: (serverId, engine) => request(`/servers/${serverId}/databases/${engine}/list`),
   listTables: (serverId, engine, dbname) => request(`/servers/${serverId}/databases/${engine}/${dbname}/tables`),
   getTableInfo: (serverId, engine, dbname, table) => request(`/servers/${serverId}/databases/${engine}/${dbname}/${table}/info`),
+  getDbSchema: (serverId, engine, dbname) => request(`/servers/${serverId}/databases/${engine}/${dbname}/schema`, { timeout: 60000 }),
   executeQuery: (serverId, engine, dbname, query) => request(`/servers/${serverId}/databases/${engine}/${dbname}/query`, { method: 'POST', body: { query }, timeout: 60000 }),
   getQueryHistory: () => request('/databases/history'),
   deleteQueryHistory: (id) => request(`/databases/history/${id}`, { method: 'DELETE' }),

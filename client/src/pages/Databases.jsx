@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { api } from '../api';
-import { Database, Play, Clock, Trash2, Key, Save, X, ChevronDown, Loader2, Table2, Columns3, Search } from 'lucide-react';
+import { Database, Play, Clock, Trash2, Key, Save, X, ChevronDown, Loader2, Table2, Columns3, Search, LayoutGrid, GitFork } from 'lucide-react';
+import SchemaMap from '../components/SchemaMap';
 import toast from 'react-hot-toast';
 
 const ENGINE_LABELS = { mysql: 'MySQL', postgresql: 'PostgreSQL', mongodb: 'MongoDB' };
@@ -35,6 +36,7 @@ export default function Databases() {
   const queryInputRef = useRef(null);
 
   // Overlays
+  const [viewMode, setViewMode] = useState('browser'); // 'browser' | 'schema'
   const [showCreds, setShowCreds] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [credentials, setCredentials] = useState([]);
@@ -218,6 +220,20 @@ export default function Databases() {
               </button>
             );
           })}
+
+          {/* View toggle */}
+          <div className="flex items-center gap-0 ml-auto border border-border">
+            <button onClick={() => setViewMode('browser')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 font-['JetBrains_Mono'] text-[10px] font-semibold tracking-[0.5px] uppercase transition-colors ${
+                viewMode === 'browser' ? 'bg-accent-green/10 text-accent-green' : 'text-text-dim hover:text-text-muted'}`}>
+              <LayoutGrid size={11} /> Browser
+            </button>
+            <button onClick={() => setViewMode('schema')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 font-['JetBrains_Mono'] text-[10px] font-semibold tracking-[0.5px] uppercase border-l border-border transition-colors ${
+                viewMode === 'schema' ? 'bg-accent-green/10 text-accent-green' : 'text-text-dim hover:text-text-muted'}`}>
+              <GitFork size={11} /> Schema Map
+            </button>
+          </div>
         </div>
       )}
 
@@ -330,6 +346,10 @@ export default function Databases() {
         </div>
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden">
+          {viewMode === 'schema' ? (
+            <SchemaMap serverId={selectedServer} engine={activeEngine} databases={databases} selectedDb={selectedDb} />
+          ) : (
+          <>
           {/* 3-Panel Browser */}
           <div className="flex flex-1 overflow-hidden">
             {/* Panel 1: Databases */}
@@ -538,6 +558,8 @@ export default function Databases() {
                 </div>
               )}
             </div>
+          )}
+          </>
           )}
         </div>
       )}
