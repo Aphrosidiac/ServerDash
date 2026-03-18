@@ -88,4 +88,21 @@ export const api = {
   updateCommandSet: (id, body) => request(`/command-sets/${id}`, { method: 'PUT', body }),
   deleteCommandSet: (id) => request(`/command-sets/${id}`, { method: 'DELETE' }),
   runCommandSet: (id) => request(`/command-sets/${id}/run`, { method: 'POST' }),
+
+  // Databases
+  getDbCredentials: (serverId) => request(`/servers/${serverId}/databases/credentials`),
+  saveDbCredentials: (serverId, body) => request(`/servers/${serverId}/databases/credentials`, { method: 'POST', body }),
+  deleteDbCredentials: (serverId, engine) => request(`/servers/${serverId}/databases/credentials/${engine}`, { method: 'DELETE' }),
+  detectDatabases: (serverId) => request(`/servers/${serverId}/databases/detect`),
+  listDatabases: (serverId, engine) => request(`/servers/${serverId}/databases/${engine}/list`),
+  listTables: (serverId, engine, dbname) => request(`/servers/${serverId}/databases/${engine}/${dbname}/tables`),
+  getTableInfo: (serverId, engine, dbname, table) => request(`/servers/${serverId}/databases/${engine}/${dbname}/${table}/info`),
+  executeQuery: (serverId, engine, dbname, query) => request(`/servers/${serverId}/databases/${engine}/${dbname}/query`, { method: 'POST', body: { query }, timeout: 60000 }),
+  getQueryHistory: () => request('/databases/history'),
+  deleteQueryHistory: (id) => request(`/databases/history/${id}`, { method: 'DELETE' }),
+
+  // Metrics
+  getServerMetrics: (serverId, range) => request(`/servers/${serverId}/metrics?range=${range || '24h'}`),
+  triggerMetricsCollection: () => request('/metrics/collect', { method: 'POST' }),
+  getMetricsSummary: () => request('/metrics/summary'),
 };

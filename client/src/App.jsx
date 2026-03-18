@@ -9,6 +9,8 @@ import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
 import ServerDetail from './pages/ServerDetail';
 import Pipelines from './pages/Pipelines';
+import Databases from './pages/Databases';
+import Analytics from './pages/Analytics';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -29,6 +31,8 @@ function AppRoutes() {
       <Route path="/projects" element={<PrivateRoute><Layout><Projects /></Layout></PrivateRoute>} />
       <Route path="/projects/:id" element={<PrivateRoute><Layout><ProjectDetail /></Layout></PrivateRoute>} />
       <Route path="/pipelines" element={<PrivateRoute><Layout><Pipelines /></Layout></PrivateRoute>} />
+      <Route path="/databases" element={<PrivateRoute><Layout><Databases /></Layout></PrivateRoute>} />
+      <Route path="/analytics" element={<PrivateRoute><Layout><Analytics /></Layout></PrivateRoute>} />
     </Routes>
   );
 }

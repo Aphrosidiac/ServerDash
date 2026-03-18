@@ -16,6 +16,9 @@ const projectRoutes = require('./routes/projects');
 const environmentRoutes = require('./routes/environments');
 const webhookRoutes = require('./routes/webhooks');
 const commandSetRoutes = require('./routes/command-sets');
+const databaseRoutes = require('./routes/databases');
+const metricsRoutes = require('./routes/metrics');
+const { startMetricsCollector } = require('./services/metrics');
 
 const app = express();
 const server = http.createServer(app);
@@ -97,6 +100,8 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/environments', environmentRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/command-sets', commandSetRoutes);
+app.use('/api', databaseRoutes);
+app.use('/api', metricsRoutes);
 
 // Serve frontend in production
 const clientDist = path.join(__dirname, '..', 'client', 'dist');
@@ -117,4 +122,5 @@ seedAdmin(process.env.ADMIN_USERNAME, process.env.ADMIN_PASSWORD);
 const PORT = process.env.PORT || 3001;
 server.listen(PORT, () => {
   console.log(`ServerDashConf running on http://localhost:${PORT}`);
+  startMetricsCollector();
 });

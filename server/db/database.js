@@ -84,7 +84,44 @@ db.exec(`
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
     FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS query_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id INTEGER NOT NULL,
+    engine TEXT NOT NULL,
+    database_name TEXT NOT NULL,
+    query TEXT NOT NULL,
+    executed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS metric_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id INTEGER NOT NULL,
+    cpu_percent REAL,
+    ram_percent REAL,
+    disk_percent REAL,
+    net_in INTEGER,
+    net_out INTEGER,
+    recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS db_credentials (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    server_id INTEGER NOT NULL,
+    engine TEXT NOT NULL,
+    db_user TEXT NOT NULL,
+    db_password TEXT,
+    auth_method TEXT DEFAULT 'password',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (server_id) REFERENCES servers(id) ON DELETE CASCADE,
+    UNIQUE(server_id, engine)
+  );
 `);
+
+db.exec(`CREATE INDEX IF NOT EXISTS idx_metric_snapshots_server_time ON metric_snapshots(server_id, recorded_at)`);
+db.exec(`CREATE INDEX IF NOT EXISTS idx_query_history_server ON query_history(server_id, executed_at DESC)`);
 
 // Migrations
 const projectCols = db.prepare("PRAGMA table_info(projects)").all().map(c => c.name);

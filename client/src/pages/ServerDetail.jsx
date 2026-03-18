@@ -9,6 +9,7 @@ import {
   Folder, File, ArrowUp, FolderGit2, ChevronRight, TerminalSquare,
   ChevronUp, ChevronDown, Send, X, Save, Loader2, GripHorizontal
 } from 'lucide-react';
+import { ResponsiveContainer, LineChart, Line, AreaChart, Area } from 'recharts';
 
 function formatBytes(bytes) {
   if (!bytes || bytes === 0) return '0 B';
@@ -43,6 +44,7 @@ export default function ServerDetail() {
   const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [metricsHistory, setMetricsHistory] = useState([]);
   const [filePath, setFilePath] = useState('/home');
 
   // Terminal state
@@ -138,6 +140,8 @@ export default function ServerDetail() {
       toast.error(err.message);
     }
     setLoading(false);
+    // Load metrics history (non-blocking)
+    api.getServerMetrics(id, '6h').then(setMetricsHistory).catch(() => {});
   }, [id, filePath]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
@@ -331,6 +335,15 @@ export default function ServerDetail() {
               </div>
               <span className="font-['Space_Grotesk'] text-3xl font-bold text-white">{stats.cpu.usage}<span className="text-lg text-text-muted">%</span></span>
               <p className="font-['JetBrains_Mono'] text-[10px] text-text-dim mt-1">{stats.cpu.cores} cores</p>
+              {metricsHistory.length > 1 && (
+                <div className="mt-3 h-12">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={metricsHistory}>
+                      <Line type="monotone" dataKey="cpu_percent" stroke="#3B82F6" strokeWidth={1.5} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
             <div className="bg-bg-card border border-border p-5">
               <div className="flex items-center justify-between mb-4">
@@ -344,6 +357,15 @@ export default function ServerDetail() {
                   <UsageBar used={stats.swap.used} total={stats.swap.total} color="bg-accent-yellow" />
                 </div>
               )}
+              {metricsHistory.length > 1 && (
+                <div className="mt-3 h-12">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={metricsHistory}>
+                      <Line type="monotone" dataKey="ram_percent" stroke="#00FF88" strokeWidth={1.5} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
             <div className="bg-bg-card border border-border p-5">
               <div className="flex items-center justify-between mb-4">
@@ -351,6 +373,15 @@ export default function ServerDetail() {
                 <HardDrive size={16} className="text-accent-orange" />
               </div>
               <UsageBar used={stats.disk.used} total={stats.disk.total} color={stats.disk.total > 0 && (stats.disk.used / stats.disk.total) > 0.85 ? 'bg-accent-red' : 'bg-accent-orange'} />
+              {metricsHistory.length > 1 && (
+                <div className="mt-3 h-12">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={metricsHistory}>
+                      <Area type="monotone" dataKey="disk_percent" stroke="#FF6B35" fill="#FF6B35" fillOpacity={0.15} strokeWidth={1.5} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
             <div className="bg-bg-card border border-border p-5">
               <div className="flex items-center justify-between mb-4">
@@ -367,6 +398,16 @@ export default function ServerDetail() {
                   <span className="font-['JetBrains_Mono'] text-xs text-accent-blue">{formatBytes(stats.network.tx)}</span>
                 </div>
               </div>
+              {metricsHistory.length > 1 && (
+                <div className="mt-3 h-12">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={metricsHistory}>
+                      <Line type="monotone" dataKey="net_in" stroke="#00FF88" strokeWidth={1.5} dot={false} />
+                      <Line type="monotone" dataKey="net_out" stroke="#3B82F6" strokeWidth={1.5} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
             </div>
           </div>
         )}
